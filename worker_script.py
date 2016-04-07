@@ -49,7 +49,7 @@ def check(files, num):
 	for file in files:
 		print('checking files in loop, current file: ' + file)
 		if file.endswith("0000" + num + ".warc.gz"):
-		print('found a match for warc')
+			print('found a match for warc')
 			return True
 	print('>>> NO MATCH WAS FOUND!!')
 	return False
