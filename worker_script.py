@@ -9,35 +9,49 @@ import string
 
 def processfiles():
 	try:
+		print('Starting movefiles thread')
 		threading.Thread(target = movefiles).start()
 		time.sleep(3)
+		print('Starting uploader thread')
 		threading.Thread(target = uploader).start()
 	except:
 		pass #for now
 
 def uploader():
+	print('Scanning ready folder for warcs')
 	for root, dirs, files in os.walk("./ready"):
 		for file in files:
 			if re.match(r'news', file) and file.endswith(".warc.gz") and not os.path.isfile(os.path.join(root, file) + ".upload"):
+				print('Creating .upload file')
 				open(os.path.join(root, file) + ".upload", 'a').close()
+				print('starting upload folder for file in thread: ' + str(file))
 				threading.Thread(target = upload, args = (file,)).start()
+				print('upload thread has been started, sleeping for 2 seconds and continueing loop')
 				time.sleep(2)
 
 def upload(filename):
+	print('Upload function start, reading rsync_target')
 	with open('rsync_target', 'r') as file:
 		rsync_target = file.read().replace('\n', '').replace('\r', '')
+	print('Starting rsync process')
 	rsync_exit_code = os.system("rsync -avz --no-o --no-g --progress --remove-source-files ./ready/" + filename + " " + rsync_target)
+	print('rsync process returned: ' + str(rsync_exit_code))
 	if rsync_exit_code == 0:
 		print('File synced successfully to the storage server.')
 	else:
 		print('Your received exit code ' + str(rsync_exit_code) + ' while syncing file to storage server.')
 	if os.path.isfile('./ready/'+ filename + '.upload'):
+		print('.upload file exists, removing it now!')
 		os.remove('./ready/'+ filename + '.upload')
 
 def check(files, num):
+	print('check function: checking files for warc nr:' + str(num))
 	for file in files:
+		print('checking files in loop, current file: ' + file)
 		if file.endswith("0000" + num + ".warc.gz"):
+		print('found a match for warc')
 			return True
+	print('>>> NO MATCH WAS FOUND!!')
 	return False
 
 def warcnum(folder):
@@ -66,12 +80,13 @@ def movefiles():
 							if firstnum > 0:
 								break
 						if os.path.isfile("./" + folder + "/" + folder + "-" + (5-len(startnum))*"0" + startnum + ".warc.gz"):
-							#print 'hi'
+							print('hi')
 							if firstnum == None:
 								firstnum = int(startnum)
 							if not startnum == "0" and not firstnum == int(startnum):
 								print(os.path.join(root, folder + "-" + str((5-len(str(int(startnum)-1)))*"0") + str(int(startnum)-1) + ".warc.gz"))
 								moved = True
+								print('moving file ' + "./" + folder + "/" + folder + "-" + (5-len(startnum))*"0" + startnum + ".warc.gz" + ' to ready folder!')
 								os.rename(os.path.join(root, folder + "-" + str((5-len(str(int(startnum)-1)))*"0") + str(int(startnum)-1) + ".warc.gz"), "./ready/" + folder + "-" + str((5-len(str(int(startnum)-1)))*"0") + str(int(startnum)-1) + ".warc.gz")
 						startnum = str(int(startnum) + 1)
 						if warcnum(folder) <= 1:
@@ -86,9 +101,10 @@ def movefiles():
 							os.rename(os.path.join(root, file), "./ready/" + file)
 					for file in files:
 						if file.endswith(".warc.gz") and not os.path.isfile("./ready/" + file):
-							#print("./ready/" + file)
+							print("not done > ./ready/" + file)
 							done = False
 					if done == True:
+						print('this file is done, removing folder!: ' + folder)
 						shutil.rmtree("./" + folder)
 	for root, dirs, files in os.walk("./ready"):
 		for file in files:
